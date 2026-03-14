@@ -4,12 +4,16 @@ from time import time
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect(("192.168.4.1", 8080))
 
-def msg(tx):
-    s.sendall((tx + "\n").encode("ASCII"))
-    rx = ""
-    while not rx.endswith("\n"):
-        rx += s.recv(1).decode("ASCII")
-    return rx[:-1]
+def msg(tx, fake=False):
+    if fake:
+        print("TX:", tx)
+        return "0"
+    else:
+        s.sendall((tx + "\n").encode("ASCII"))
+        rx = ""
+        while not rx.endswith("\n"):
+            rx += s.recv(1).decode("ASCII")
+        return rx[:-1]
 
 
 def emergency_stop():
@@ -39,12 +43,13 @@ if __name__ == "__main__":
     while True:
         increment_thrusts(thrust, thrust, thrust, thrust)
         x = input("Press enter to increase thrust by 10, or Ctrl-C to quit.")
-        if x == " ":
-            thrust += 5
-        elif x == "-":
-            thrust -= 2.5
-        elif x == "":
+        if x == "a":
+            thrust += 10
+        elif x == "z":
+            thrust -= 5
+        elif x == "x":
             e()
+        print("Thrust:", thrust)
 
 
 
