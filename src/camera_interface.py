@@ -1,84 +1,95 @@
 import cv2
 import numpy as np
 
-# Open webcam (keep your index)
 cap = cv2.VideoCapture(2)
+
+# Morphological kernel
+kernel = np.ones((5, 5), np.uint8)
+
+kernel_open  = np.ones((3, 3), np.uint8)  # smaller = less aggressive noise removal
+kernel_close = np.ones((7, 7), np.uint8)  # larger = better fills bloom holes
+
+def process_led_mask(hsv, lower, upper):
+    mask = cv2.inRange(hsv, lower, upper)
+
+    _, value_mask = cv2.threshold(hsv[:, :, 2], 180, 255, cv2.THRESH_BINARY)
+    mask = cv2.bitwise_and(mask, value_mask)
+
+    # Smaller open kernel — won't erase tiny LED blobs
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN,  kernel_open)
+    # Larger close kernel — fills gaps from bloom desaturation
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel_close)
+
+    return mask
+
+def find_leds(mask, min_area=50, min_radius=3, min_circularity=0.6):
+    """Find circular blobs in mask that look like LEDs."""
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    leds = []
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        if area < min_area:
+            continue
+
+        perimeter = cv2.arcLength(cnt, True)
+        if perimeter == 0:
+            continue
+
+        circularity = 4 * np.pi * area / (perimeter ** 2)
+        if circularity < min_circularity:
+            continue
+
+        (x, y), radius = cv2.minEnclosingCircle(cnt)
+        if radius < min_radius:
+            continue
+
+        leds.append((int(x), int(y), int(radius)))
+    return leds
+
+
+def mouse_callback(event, x, y, flags, param):
+    if event == cv2.EVENT_LBUTTONDOWN:
+        hsv_pixel = param[y, x]
+        print(f"HSV at ({x},{y}): H={hsv_pixel[0]}, S={hsv_pixel[1]}, V={hsv_pixel[2]}")
 
 while True:
     ret, frame = cap.read()
     if not ret:
         break
 
-    # === 1. Pre-processing: smoothing + contrast boost (kills sensor noise & boosts LEDs) ===
-    # Small Gaussian blur on the original frame (better than blurring binary mask)
-    blurred = cv2.GaussianBlur(frame, (5, 5), 0)
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    # Optional but very effective: CLAHE on Value channel only (increases LED contrast without amplifying noise)
-    hsv_temp = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    hsv_temp[:, :, 2] = clahe.apply(hsv_temp[:, :, 2])
-    hsv = hsv_temp  # reuse the enhanced HSV
+    # --- Green LED ---
+    # Wide hue range (35–90) catches yellow-green bloom + pure green
+    # Low saturation floor (40) handles overexposed/washed-out LED center
+    # High value floor (170) ensures we only pick up bright LED light
+    green_lower = np.array([40, 30, 180])   # H-10, S floor below 60, V floor
+    green_upper = np.array([70, 255, 255])  # H+10, full S and V ceiling
+    green_mask = process_led_mask(hsv, green_lower, green_upper)
 
-    # === 2. Targeted HSV masks for each color (core noise killer) ===
-    # Green (tune these if your LEDs are a different shade)
-    lower_green = np.array([35, 50, 50])
-    upper_green = np.array([85, 255, 255])
-    mask_green = cv2.inRange(hsv, lower_green, upper_green)
+    # --- Blue LED (adjust range to your drone's blue) ---
+    blue_lower = np.array([100, 80, 170])
+    blue_upper = np.array([130, 255, 255])
+    blue_mask = process_led_mask(hsv, blue_lower, blue_upper)
 
-    # Blue
-    lower_blue = np.array([95, 50, 50])
-    upper_blue = np.array([135, 255, 255])
-    mask_blue = cv2.inRange(hsv, lower_blue, upper_blue)
+    # Draw detections
+    for (x, y, r) in find_leds(green_mask):
+        cv2.circle(frame, (x, y), r, (0, 255, 0), 2)
+        cv2.putText(frame, "Green LED", (x + 10, y),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-    # White (low saturation + very high value — ignores colored ambient light)
-    lower_white = np.array([0, 0, 180])
-    upper_white = np.array([180, 40, 255])
-    mask_white = cv2.inRange(hsv, lower_white, upper_white)
+    for (x, y, r) in find_leds(blue_mask):
+        cv2.circle(frame, (x, y), r, (255, 100, 0), 2)
+        cv2.putText(frame, "Blue LED", (x + 10, y),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 100, 0), 2)
 
-    # === 3. Morphological cleanup on EVERY mask (removes tiny noise specks & fills holes) ===
-    kernel = np.ones((5, 5), np.uint8)
-    for mask in (mask_green, mask_blue):
-        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=2)   # remove small noise
-        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=1)  # fill small holes inside LED
+    cv2.imshow("Frame", frame)
+    cv2.imshow("Green Mask", green_mask)
+    cv2.imshow("Blue Mask", blue_mask)
+    
+    # cv2.imshow("Frame", frame)
+    # cv2.setMouseCallback("Frame", mouse_callback, hsv)
 
-    # === 4. Combined mask just for visualisation (like your original) ===
-    combined_mask = cv2.bitwise_or(mask_green, mask_blue)
-    # combined_mask = cv2.bitwise_or(combined_mask, mask_white)
-
-    # === 5. Helper to process each mask with strong blob filtering ===
-    def detect_leds(mask, color_name, bgr_color, frame):
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        for cnt in contours:
-            area = cv2.contourArea(cnt)
-            if area < 50:                      # ignore tiny noise blobs
-                continue
-
-            perimeter = cv2.arcLength(cnt, True)
-            if perimeter == 0:
-                continue
-            circularity = 4 * np.pi * area / (perimeter * perimeter)
-            if circularity < 0.65:             # LEDs are almost perfectly round
-                continue
-
-            (x, y), radius = cv2.minEnclosingCircle(cnt)
-            if radius < 4:                     # too small to be a real LED
-                continue
-
-            center = (int(x), int(y))
-            radius = int(radius)
-
-            cv2.circle(frame, center, radius, bgr_color, 2)
-            cv2.putText(frame, f"{color_name} LED", (center[0] + 15, center[1] - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, bgr_color, 2)
-
-    # Run detection for all three colors
-    detect_leds(mask_green, "Green", (0, 255, 0), frame)
-    detect_leds(mask_blue,  "Blue",  (255, 0, 0), frame)
-    # detect_leds(mask_white, "White", (255, 255, 255), frame)
-
-    # === Show results ===
-    cv2.imshow("Frame (detections)", frame)
-    cv2.imshow("Combined Mask (clean)", combined_mask)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
