@@ -4,8 +4,8 @@ from drone_manager import DroneManager
 class KeyboardController:
     def __init__(self, drone_manager: DroneManager):
         self.drone_manager = drone_manager
-        self.angle_step = 1.0
-        self.motor_step = 1
+        self.angle_step = 5.0
+        self.motor_step = 10
         self.motor_target = 0
         self.pitch_target = 0.0
         self.roll_target = 0.0
