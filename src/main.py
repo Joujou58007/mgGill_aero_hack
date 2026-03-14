@@ -1,15 +1,18 @@
-from drone_rc import DroneRC
+from drone_manager import DroneManager
 import time
 
 def main():
-    print("Hello from main")
-    drone_rc = DroneRC()
-    drone_rc.connect()
+    drone_manager = DroneManager(16, is_flight_mode=False, p=0.02, i=0.00001, d=5)
+    drone_manager.execute(logic)
+
+def logic(drone_manager: DroneManager):
+    time.sleep(5)
+    print("Starting loop")
+
     while True:
-        print("Hello from loop")
-        time.sleep(1)
-        pitch = drone_rc.get_pitch()
+        pitch = drone_manager.get_pitch()
         print(pitch)
+        time.sleep(0.5)
 
 if __name__ == "__main__":
     main()
