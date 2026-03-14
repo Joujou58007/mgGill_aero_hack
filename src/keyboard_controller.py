@@ -92,12 +92,10 @@ class KeyboardController:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Keyboard controller for DroneRC")
-    parser.add_argument("--drone-number", type=int, default=8, help="IP suffix for drone (192.168.4.X)")
-    args = parser.parse_args()
 
     rc = DroneRC()
-    rc.connect(args.drone_number)
+    rc.connect()
+    rc.msg('rst')
     controller = KeyboardController(rc)
 
     try:

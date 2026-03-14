@@ -4,7 +4,7 @@ class DroneRC:
     def __init__(self):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
-    def connect(self, number = 8):
+    def connect(self, number = 1):
         print("Connecting to socket")
         self.s.connect((f"192.168.4.{number}", 8080))
         print("Connected to socket")
