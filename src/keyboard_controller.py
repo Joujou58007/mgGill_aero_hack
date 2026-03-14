@@ -96,6 +96,7 @@ def main():
     rc = DroneRC()
     rc.connect()
     rc.msg('rst')
+    rc.set_p_gain(20)
     controller = KeyboardController(rc)
 
     try:
