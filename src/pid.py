@@ -14,7 +14,6 @@ class PIDController():
         self.last_i = 0.0
         self.last_d = 0.0
 
-
     def compute(self, error, dt, d_meas=None):
         if dt <= 0: return 0.0
         # I
