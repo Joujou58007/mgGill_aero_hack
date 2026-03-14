@@ -21,7 +21,8 @@ class KeyboardController:
         stdscr.addstr(6, 0, "Arrow Up/Down : pitch +/-")
         stdscr.addstr(7, 0, "Arrow Left/Right : roll +/-")
         stdscr.addstr(8, 0, "Space : zero pitch/roll")
-        stdscr.addstr(9, 0, "q : emergency stop and quit")
+        stdscr.addstr(9, 0, "e : recalibrate")
+        stdscr.addstr(10, 0, "q : emergency stop and quit")
         stdscr.refresh()
 
     def run(self, stdscr):
@@ -38,6 +39,9 @@ class KeyboardController:
             if key in (ord("q"), ord("Q")):
                 self.drone_manager.disable_motors()
                 return
+            if key in (ord("e"), ord("E")):
+                self.drone_manager.recalibrate()
+                self.drone_manager.reset_pid()
             if key in (ord("w"), ord("W")):
                 self.motor_target += self.motor_step
                 self.drone_manager.increment_thrusts(self.motor_step)
