@@ -1,92 +1,133 @@
+"""
+The following functions can be used to communicate with the drone
+
+general advice:
+do not have constant high-bandwidth communications with the drone,
+because processing time doing wifi stuff is processing time not spent updating the gyroscope,
+which will lead to increased drift
+"""
+import select
+
+
+
+
 import socket
 
-class DroneRC:
-    def __init__(self):
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    
-    def connect(self, number = 8):
-        print("Connecting to socket")
-        self.s.connect((f"192.168.4.{number}", 8080))
-        print("Connected to socket")
 
-    def msg(self, tx):
-        self.s.sendall((tx + "\n").encode("ASCII"))
-        rx = ""
-        while not rx.endswith("\n"):
-            rx += self.s.recv(1).decode("ASCII")
-        return rx[:-1]
+def empty_socket(sock):
+    input_ready, _, _ = select.select([sock], [], [], 0.0)
+    while input_ready:
+        data = sock.recv(1)
+        if not data:
+            break
+        input_ready, _, _ = select.select([sock], [], [], 0.0)
 
-    def emergency_stop(self):
-        self.msg("mode0")
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("192.168.4.1", 8080))
 
-    def e(self):
-        self.emergency_stop()
+def msg(tx):
+    empty_socket(s)
+    s.sendall((tx + "\n").encode("ASCII"))
+    rx = ""
+    while not rx.endswith("\n"):
+        rx += s.recv(1).decode("ASCII")
+    return rx[:-1]
 
-    # mode 0: off
-    # mode 1: full manual motor control
-    # mode 2: PID control for pitch and roll
-    def set_mode(self, m):
-        self.msg("mode" + str(m))
 
-    def get_mode(self):
-        return self.msg("gMode")
+def emergency_stop():
+    msg("mode0")
 
-    # always between 0 and 250
-    # in mode 2 sets baseline value in PID results are added to
-    def manual_thrusts(self, A, B, C, D):
-        self.msg("manT\n" + str(A) + "," + str(B) + "," + str(C) + "," + str(D) + "\n")
+def e():
+    emergency_stop()
 
-    # same as prev function, but increments last value instead of overwriting
-    def increment_thrusts(self, A, B, C, D):
-        self.msg("incT\n" + str(A) + "," + str(B) + "," + str(C) + "," + str(D) + "\n")
+# mode 0: off
+# mode 1: full manual motor control
+# mode 2: PID control for pitch and roll
+def set_mode(m):
+    msg("mode" + str(m))
 
-    def get_pitch(self): # unit close-ish to degrees, but not exact
-        return float(self.msg("angX")) / 16
+def get_mode():
+    return msg("gMode")
 
-    def get_roll(self): # unit close-ish to degrees, but not exact
-        return float(self.msg("angY")) / 16
+# always between 0 and 250
+# in mode 2 sets baseline value in PID results are added to
+def manual_thrusts(A, B, C, D):
+    msg("manT\n" + str(A) + "," + str(B) + "," + str(C) + "," + str(D) + "\n")
 
-    def get_gyro_pitch(self): # pitch rate in degree/sec
-        return float(self.msg("gyroX"))
+# same as prev function, but increments last value instead of overwriting
+def increment_thrusts(A, B, C, D):
+    msg("incT\n" + str(A) + "," + str(B) + "," + str(C) + "," + str(D) + "\n")
 
-    def get_gyro_roll(self): # roll rate in degree/sec
-        return float(self.msg("gyroY"))
+def get_pitch(): # unit close-ish to degrees, but not exact
+    return float(msg("angX")) / 16
 
-    # target pitch to aim for in mode 2
-    # same unit as get_pitch()
-    def set_pitch(self, r):
-        self.msg("gx" + str(r))
+def get_roll(): # unit close-ish to degrees, but not exact
+    return float(msg("angY")) / 16
 
-    # target roll to aim for in mode 2
-    # same unit as get_roll()
-    def set_roll(self, r):
-        self.msg("gy" + str(r))
+def get_gyro_pitch(): # pitch rate in degree/sec
+    return float(msg("gyroX"))
 
-    def set_p_gain(self, p): # approx 0 - 0.5
-        self.msg("gainP" + str(p))
+def get_gyro_roll(): # roll rate in degree/sec
+    return float(msg("gyroY"))
 
-    def set_i_gain(self, i): # below 0.00003
-        self.msg("gainI" + str(i))
+# target pitch to aim for in mode 2
+# same unit as get_pitch()
+def set_pitch(r):
+    msg("gx" + str(r))
 
-    def set_d_gain(self, d): # approx 0 - 10
-        self.msg("gainD" + str(d))
+# target roll to aim for in mode 2
+# same unit as get_roll()
+def set_roll(r):
+    msg("gy" + str(r))
 
-    def red_LED(self, val): # controls LED light. 1 for on, 0 for off
-        self.msg("lr" + str(val))
+def set_p_gain(p): # approx 0 - 0.5
+    msg("gainP" + str(p))
 
-    def blue_LED(self, val):
-        self.msg("lb" + str(val))
+def set_i_gain(i): # below 0.00003
+    msg("gainI" + str(i))
 
-    def green_LED(self, val):
-        self.msg("lg" + str(val))
+def set_d_gain(d): # approx 0 - 10
+    msg("gainD" + str(d))
 
-    def reset_integral(self): # resets the value of integrands in the PID loops to 0
-        self.msg("irst")
+def red_LED(val): # controls LED light. 1 for on, 0 for off
+    msg("lr" + str(val))
 
-    # returns [I_x, I_y] the integrands from the pitch and roll pid loops
-    def get_i_values(self):
-        resp = self.msg("geti").split(",")
-        return [float(resp[0]), float(resp[1])]
+def blue_LED(val):
+    msg("lb" + str(val))
 
-    def set_yaw(self, y): # directly sets motor difference for yaw control
-        self.msg("yaw" + str(y))
+def green_LED(val):
+    msg("lg" + str(val))
+
+def reset_integral(): # resets the value of integrands in the PID loops to 0
+    msg("irst")
+
+# returns [I_x, I_y] the integrands from the pitch and roll pid loops
+def get_i_values():
+    resp = msg("geti").split(",")
+    return [float(resp[0]), float(resp[1])]
+
+def set_yaw(y): # directly sets motor difference for yaw control
+    msg("yaw" + str(y))
+
+def get_firmware_version():
+    return msg("vers")
+
+
+
+
+
+
+
+
+# the following functions only work if firmware 1.2 or higher is installed on the drone
+# if you want to use this, please make sure by running msg("vers")
+
+# use at start of code if you want to use the drone outside of the cage. Overrides all mode changes
+def lock_props():
+    msg("lck")
+
+# recalibrates the gyroscope.
+# Do not communicate with the drone for 15 seconds after calling this
+def recalibrate():
+    msg("rst")
+
