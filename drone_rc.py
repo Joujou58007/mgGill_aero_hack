@@ -46,7 +46,7 @@ def manual_thrusts(A, B, C, D):
 
 # same as prev function, but increments last value instead of overwriting
 def increment_thrusts(A, B, C, D):
-    msg("manT\n" + str(A) + "," + str(B) + "," + str(C) + "," + str(D) + "\n")
+    msg("incT\n" + str(A) + "," + str(B) + "," + str(C) + "," + str(D) + "\n")
 
 def get_pitch(): # unit close-ish to degrees, but not exact
     return float(msg("angX")) / 16
@@ -79,6 +79,15 @@ def set_i_gain(i): # below 0.00003
 def set_d_gain(d): # approx 0 - 10
     msg("gainD" + str(d))
 
+def red_LED(val): # controls LED light. 1 for on, 0 for off
+    msg("lr" + str(val))
+
+def blue_LED(val):
+    msg("lb" + str(val))
+
+def green_LED(val):
+    msg("lg" + str(val))
+
 def reset_integral(): # resets the value of integrands in the PID loops to 0
     msg("irst")
 
@@ -89,4 +98,3 @@ def get_i_values():
 
 def set_yaw(y): # directly sets motor difference for yaw control
     msg("yaw" + str(y))
-
