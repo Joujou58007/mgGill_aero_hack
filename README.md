@@ -1,6 +1,6 @@
 # Helikopter McGill Aero Hack
 
-Run the following command:
 ```
-uv run python src/main.py
+uv run python src/main_keyboard.py
+uv run python src/main_test.py
 ```

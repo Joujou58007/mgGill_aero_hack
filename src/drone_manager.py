@@ -110,3 +110,12 @@ class DroneManager:
 
     def get_pitch(self):
         return float(self.send_command("angX"))
+
+    def increment_thrusts(self, A, B, C, D):
+        self.msg("incT\n" + str(A) + "," + str(B) + "," + str(C) + "," + str(D) + "\n")
+
+    def set_pitch(self, r):
+        self.msg("gx" + str(r))
+
+    def set_roll(self, r):
+        self.msg("gy" + str(r))
