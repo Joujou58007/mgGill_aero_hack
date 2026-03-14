@@ -12,17 +12,15 @@ class KeyboardController:
 
     def _draw(self, stdscr):
         stdscr.erase()
-
-        stdscr.addstr(1, 0, f"Motor target: {self.motor_target}")
+        stdscr.addstr(1, 0, f"Thrust target: {self.motor_target}")
         stdscr.addstr(2, 0, f"Pitch target: {self.pitch_target:.1f}")
         stdscr.addstr(3, 0, f"Roll target: {self.roll_target:.1f}")
-
-        stdscr.addstr(5, 0, "W/S : motor percent +/-")
-        stdscr.addstr(6, 0, "Arrow Up/Down : pitch +/-")
-        stdscr.addstr(7, 0, "Arrow Left/Right : roll +/-")
-        stdscr.addstr(8, 0, "Space : zero pitch/roll")
-        stdscr.addstr(9, 0, "e : recalibrate")
-        stdscr.addstr(10, 0, "q : emergency stop and quit")
+        stdscr.addstr(5, 0, "W / S : Thrust percent +/-")
+        stdscr.addstr(6, 0, "Arrow Up / Down : Pitch +/-")
+        stdscr.addstr(7, 0, "Arrow Left / Right : roll +/-")
+        stdscr.addstr(8, 0, "Space : Zero pitch / roll")
+        stdscr.addstr(9, 0, "E : Recalibrate")
+        stdscr.addstr(10, 0, "Q : Emergency stop and quit")
         stdscr.refresh()
 
     def run(self, stdscr):
@@ -44,10 +42,12 @@ class KeyboardController:
                 self.drone_manager.reset_pid()
             if key in (ord("w"), ord("W")):
                 self.motor_target += self.motor_step
-                self.drone_manager.increment_thrusts(self.motor_step)
+                self.drone_manager.increment_thrust(self.motor_step)
+                # self.drone_manager.set_thrust(self.motor_target)
             elif key in (ord("s"), ord("S")):
                 self.motor_target -= self.motor_step
-                self.drone_manager.increment_thrusts(-self.motor_step)
+                self.drone_manager.increment_thrust(-self.motor_step)
+                # self.drone_manager.set_thrust(self.motor_target)
             elif key == curses.KEY_UP:
                 self.pitch_target += self.angle_step
                 self.drone_manager.set_pitch(self.pitch_target)
