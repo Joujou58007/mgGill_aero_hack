@@ -10,7 +10,7 @@ which will lead to increased drift
 import socket
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect(("192.168.4.16", 8080))
+s.connect(("192.168.4.8", 8080))
 
 def msg(tx):
     s.sendall((tx + "\n").encode("ASCII"))
