@@ -25,11 +25,6 @@ class DroneManager:
             return
         self.connect_socket("192.168.4.1", 8080)
         print(f"Successfully connected to drone {self.number}")
-        self.set_pid_config()
-        self.recalibrate()
-        self.turn_on_blue()
-        self.turn_on_green()
-        self.reset_pid()
         if self.is_flight_mode:
             self.enable_motors()
         print("Initialization done")
@@ -58,12 +53,6 @@ class DroneManager:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((ip, port))
     
-    def turn_on_blue(self):
-        self.send_msg("lb1")
-    
-    def turn_on_green(self):
-        self.send_msg("lg1")
-    
     def send_command(self, command):
         self.flush_socket()
         self.socket.sendall((command + "\n").encode("ASCII"))
@@ -75,6 +64,10 @@ class DroneManager:
     def send_msg(self, msg):
         self.flush_socket()
         self.socket.sendall((msg + "\n").encode("ASCII"))
+        rx = ""
+        while not rx.endswith("\n"):
+            rx += self.socket.recv(1).decode("ASCII")
+        return rx[:-1]
     
     def flush_socket(self):
         input_ready, _, _ = select.select([self.socket], [], [], 0.0)
@@ -104,9 +97,6 @@ class DroneManager:
     def recalibrate(self):
         print("Recalibrating...")
         self.send_command("rst")
-    
-    def reset_pid(self):
-        self.send_msg("irst")
 
     def get_pitch(self):
         return float(self.send_command("angX"))
@@ -122,3 +112,6 @@ class DroneManager:
 
     def set_roll(self, r):
         self.send_msg("gy" + str(r))
+    
+    def reset_drift(self):
+        self.send_msg("irst")

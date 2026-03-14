@@ -5,7 +5,7 @@ class KeyboardController:
     def __init__(self, drone_manager: DroneManager):
         self.drone_manager = drone_manager
         self.angle_step = 5.0
-        self.motor_step = 10
+        self.motor_step = 20
         self.motor_target = 0
         self.pitch_target = 0.0
         self.roll_target = 0.0
@@ -19,8 +19,9 @@ class KeyboardController:
         stdscr.addstr(6, 0, "Arrow Up / Down : Pitch +/-")
         stdscr.addstr(7, 0, "Arrow Left / Right : roll +/-")
         stdscr.addstr(8, 0, "Space : Zero pitch / roll")
-        stdscr.addstr(9, 0, "E : Recalibrate")
-        stdscr.addstr(10, 0, "Q : Emergency stop and quit")
+        stdscr.addstr(10, 0, "R : Reset drift")
+        stdscr.addstr(11, 0, "E : Recalibrate")
+        stdscr.addstr(12, 0, "Q : Emergency stop and quit")
         stdscr.refresh()
 
     def run(self, stdscr):
@@ -39,15 +40,16 @@ class KeyboardController:
                 return
             if key in (ord("e"), ord("E")):
                 self.drone_manager.recalibrate()
-                self.drone_manager.reset_pid()
+            if key in (ord("r"), ord("R")):
+                self.drone_manager.reset_drift()
             if key in (ord("w"), ord("W")):
                 self.motor_target += self.motor_step
-                self.drone_manager.increment_thrust(self.motor_step)
-                # self.drone_manager.set_thrust(self.motor_target)
+                # self.drone_manager.increment_thrust(self.motor_step)
+                self.drone_manager.set_thrust(self.motor_target)
             elif key in (ord("s"), ord("S")):
                 self.motor_target -= self.motor_step
-                self.drone_manager.increment_thrust(-self.motor_step)
-                # self.drone_manager.set_thrust(self.motor_target)
+                # self.drone_manager.increment_thrust(-self.motor_step)
+                self.drone_manager.set_thrust(self.motor_target)
             elif key == curses.KEY_UP:
                 self.pitch_target += self.angle_step
                 self.drone_manager.set_pitch(self.pitch_target)
