@@ -4,7 +4,7 @@ import select
 import time
 
 class DroneManager:
-    def __init__(self, number, is_flight_mode=False, p=0.02, i=0.00001, d=5):
+    def __init__(self, number, p, i, d, is_flight_mode=False):
         self.socket = None
         self.number = number
         self.p = p
@@ -111,11 +111,11 @@ class DroneManager:
     def get_pitch(self):
         return float(self.send_command("angX"))
 
-    def increment_thrusts(self, A, B, C, D):
-        self.msg("incT\n" + str(A) + "," + str(B) + "," + str(C) + "," + str(D) + "\n")
+    def increment_thrusts(self, value):
+        self.send_msg("incT\n" + str(value) + "," + str(value) + "," + str(value) + "," + str(value) + "\n")
 
     def set_pitch(self, r):
-        self.msg("gx" + str(r))
+        self.send_msg("gx" + str(r))
 
     def set_roll(self, r):
-        self.msg("gy" + str(r))
+        self.send_msg("gy" + str(r))

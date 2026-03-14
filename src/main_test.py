@@ -2,7 +2,7 @@ from drone_manager import DroneManager
 import time
 
 def main():
-    drone_manager = DroneManager(16, is_flight_mode=False, p=0.02, i=0.00001, d=5)
+    drone_manager = DroneManager(8, 35, 0.1, 0.1, is_flight_mode=False)
     drone_manager.execute(logic)
 
 def logic(drone_manager: DroneManager):
